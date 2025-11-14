@@ -76,10 +76,15 @@ WSGI_APPLICATION = 'Backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'djongo',
+        'NAME': 'auth_system',
+        'ENFORCE_SCHEMA': False,
+        'CLIENT': {
+            'host': 'mongodb+srv://Admin:Sujitharike@123@cluster0.cotcdzs.mongodb.net/auth_system?retryWrites=true&w=majority'
+        }
     }
 }
+
 
 
 # Password validation
