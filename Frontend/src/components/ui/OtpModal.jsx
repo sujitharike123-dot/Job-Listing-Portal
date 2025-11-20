@@ -15,17 +15,10 @@ export default function OtpModal({ open, email, onClose, onResend, onVerify }) {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-
-  // Mask email → d*********@gmail.com
   const maskEmail = (email) => {
     if (!email) return "";
     const [user, domain] = email.split("@");
-    return (
-      user[0] +
-      "*".repeat(Math.max(user.length - 1, 1)) +
-      "@" +
-      domain
-    );
+    return (user[0] + "*".repeat(Math.max(user.length - 1, 1)) + "@" + domain);
   };
 
   useEffect(() => {
@@ -35,23 +28,18 @@ export default function OtpModal({ open, email, onClose, onResend, onVerify }) {
     setSent(true);
     setErr("");
   }, [open]);
-
-  // Timer countdown
   useEffect(() => {
     if (!open) return;
     if (timer === 0) return;
-
     const id = setTimeout(() => setTimer((prev) => prev - 1), 1000);
     return () => clearTimeout(id);
   }, [timer, open]);
 
   const handleOtpChange = (value, index) => {
     if (!/^[0-9]?$/.test(value)) return;
-
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
     if (value && index < 5) {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
@@ -81,7 +69,6 @@ export default function OtpModal({ open, email, onClose, onResend, onVerify }) {
     setTimer(60);
     setOtp(["", "", "", "", "", ""]);
     setErr("");
-
     try {
       await onResend(email);
       setSent(true);
@@ -89,57 +76,33 @@ export default function OtpModal({ open, email, onClose, onResend, onVerify }) {
       setErr("Failed to resend OTP");
     }
   };
-
-  // if modal is closed, render nothing
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur flex items-center justify-center z-50">
-      {/* backdrop container */}
-      <div className="bg-white/5 rounded-lg p-6 w-full max-w-md mx-4">
-        {/* header */}
+      <div className="bg-gray-900/80 rounded-lg p-6 w-full max-w-md mx-4">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-white">Please verify your email</h3>
           <p className="text-sm text-gray-300">We sent a one-time password to <span className="font-medium">{maskEmail(email)}</span></p>
         </div>
-
-        {/* OTP inputs (your existing mapped inputs should be placed above this block if you have them) */}
         <div className="grid grid-cols-6 gap-3 mb-4">
           {otp.map((val, idx) => (
-            <input
-              key={idx}
-              value={val}
-              onChange={(e) => handleOtpChange(e, idx)}
-              className="w-full bg-white/10 text-center py-3 rounded"
-              maxLength={1}
-            />
+            <input key={idx} id={`otp-${idx}`} value={val} onChange={(e) => handleOtpChange(e.target.value, idx)} onKeyDown={(e) => {if (e.key === "Backspace" && !otp[idx] && idx > 0) {document.getElementById(`otp-${idx - 1}`)?.focus();}}}className="w-full bg-white/10 text-center py-3 rounded text-white text-lg" maxLength={1}/>
           ))}
         </div>
-
-        {/* message / timer */}
         {err && <p className="text-red-400 text-sm text-center mb-2">{err}</p>}
         <div className="text-sm text-gray-400 mb-4 text-center">
-          {sent ? <span>OTP sent • Try within {timer}s</span> : <span>Sending OTP...</span>}
+          {sent && timer > 0 ? (
+            <span>OTP sent • {timer}s left</span>
+          ) : (
+            <button onClick={handleResend} className="text-blue-400 underline cursor-pointer">Resend OTP</button>
+          )}
         </div>
-
-        {/* actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleVerify}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg"
-          >
-            Verify Email
-          </button>
-
-          <button
-            onClick={onClose}
-            className="flex-1 text-gray-300 hover:underline bg-transparent py-3 rounded-lg border border-white/6"
-          >
-            Close
-          </button>
+        <div className="flex gap-3 cursor-pointer">
+          <button onClick={handleVerify} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg cursor-pointer">Verify Email</button>
+          <button onClick={onClose} className="flex-1 text-gray-300 hover:underline bg-transparent py-3 rounded-lg border border-white/6 cursor-pointer">Close</button>
         </div>
       </div>
     </div>
   );
 
-} // end OtpModal component
+}

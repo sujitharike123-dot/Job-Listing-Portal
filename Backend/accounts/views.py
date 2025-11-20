@@ -1,45 +1,107 @@
-from django.shortcuts import render
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password
-from .serializers import UserRegistrationSerializer
-from django.contrib.auth import get_user_model
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
+from django.utils import timezone
+from .models import Candidate, Recruiter, EmailOTP
+from django.conf import settings
 
-User = get_user_model()
+class CandidateSendOtpView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if Candidate.objects.filter(email=email).exists():
+            return Response({"error": "Account already exists, please sign in"}, status=status.HTTP_400_BAD_REQUEST)
+        otp = get_random_string(length=6, allowed_chars="0123456789")
+        EmailOTP.objects.update_or_create(email=email,defaults={"otp": otp, "valid_until": timezone.now() + timezone.timedelta(minutes=10)})
+        send_mail(subject="Your OTP Code",message=f"Your OTP is {otp}",from_email=settings.DEFAULT_FROM_EMAIL,recipient_list=[email],)
+        return Response({"message": "OTP sent successfully"}, status=status.HTTP_200_OK)
 
-class RegisterView(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = UserRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class LoginView(APIView):
-    def post(self, request, *args, **kwargs):
+class CandidateVerifyOtpView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
         username = request.data.get("username")
-        password = request.data.get("password")
-
-        if not username or not password:
-            return Response({"detail": "Username and password are required."}, status=status.HTTP_400_BAD_REQUEST)
-
+        password = request.data.get("password", "")
+        mobile_number = request.data.get("mobile_number")
+        if not all([email, otp, username, mobile_number]):
+            return Response({"error": "All fields except password are required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            user = User.objects.get(username=username)
-            if not check_password(password, user.password):
-                return Response({"detail": "Invalid password."}, status=status.HTTP_401_UNAUTHORIZED)
+            otp_obj = EmailOTP.objects.get(email=email)
+        except EmailOTP.DoesNotExist:
+            return Response({"error": "OTP not sent"}, status=status.HTTP_400_BAD_REQUEST)
+        if not otp_obj.is_valid() or otp_obj.otp != otp:
+            return Response({"error": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        candidate, created = Candidate.objects.get_or_create(
+            email=email,
+            defaults={"username": username,"password": password,"mobile_number": mobile_number,})
+        otp_obj.delete()
+        return Response({"message": "OTP verified, candidate registered successfully"}, status=status.HTTP_200_OK)
 
-            refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
+class RecruiterSendOtpView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if Recruiter.objects.filter(email=email).exists():
+            return Response({"error": "Account already exists, please sign in"}, status=status.HTTP_400_BAD_REQUEST)
+        otp = get_random_string(length=6, allowed_chars="0123456789")
+        EmailOTP.objects.update_or_create(email=email,defaults={"otp": otp, "valid_until": timezone.now() + timezone.timedelta(minutes=10)})
+        send_mail(subject="Your OTP Code",message=f"Your OTP is {otp}",from_email=settings.DEFAULT_FROM_EMAIL,recipient_list=[email],)
+        return Response({"message": "OTP sent successfully"}, status=status.HTTP_200_OK)
 
-            return Response({
-                "message": "Login successful",
-                "user": user.username,
-                "access": access_token,
-                "refresh": str(refresh),
-            }, status=status.HTTP_200_OK)
+class RecruiterVerifyOtpView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+        username = request.data.get("username")
+        password = request.data.get("password", "")
+        mobile_number = request.data.get("mobile_number")
+        organization_name = request.data.get("organization_name")
+        if not all([email, otp, username, mobile_number, organization_name]):
+            return Response({"error": "All fields except password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            otp_obj = EmailOTP.objects.get(email=email)
+        except EmailOTP.DoesNotExist:
+            return Response({"error": "OTP not sent"}, status=status.HTTP_400_BAD_REQUEST)
+        if not otp_obj.is_valid() or otp_obj.otp != otp:
+            return Response({"error": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
 
-        except User.DoesNotExist:
-            return Response({"detail": "Invalid username or role."}, status=status.HTTP_401_UNAUTHORIZED)
+        recruiter, created = Recruiter.objects.get_or_create(
+            email=email,
+            defaults={"username": username,"password": password,"mobile_number": mobile_number,"organization_name": organization_name,})
+        otp_obj.delete()
+        return Response({"message": "OTP verified, recruiter registered successfully"}, status=status.HTTP_200_OK)
+
+
+class CandidateLoginView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        if not all([email, password]):
+            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            candidate = Candidate.objects.get(email=email)
+        except Candidate.DoesNotExist:
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+        if candidate.password != password:
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": f"Welcome {candidate.username}!"}, status=status.HTTP_200_OK)
+
+
+class RecruiterLoginView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        if not all([email, password]):
+            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            recruiter = Recruiter.objects.get(email=email)
+        except Recruiter.DoesNotExist:
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if recruiter.password != password:
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": f"Welcome {recruiter.username}!"}, status=status.HTTP_200_OK)
