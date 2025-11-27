@@ -11,6 +11,7 @@ import CandidateLogin from "./components/CandidateLogin.jsx";
 import Home from "./components/Home.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import CNavbar from "./components/CNavbar.jsx";
+import Profile from "./components/Profile.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 function Layout() {
@@ -39,6 +40,10 @@ function Layout() {
         <Route path="/candidate-login" element={<CandidateLogin />} />
         <Route path="/recruiter-login" element={<RecruiterLogin />} />
         <Route path="/home"element={<ProtectedRoute><Home /></ProtectedRoute>}/>
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        
+
+
       </Routes>
     </>
   );

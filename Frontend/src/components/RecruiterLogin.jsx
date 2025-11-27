@@ -16,10 +16,10 @@ export default function CandidateLogin() {
       return;
     }
     try {
-      const res = await axios.post('http://127.0.0.1:8000/recruiter/login/', { email:email, password:password });
+      const res = await axios.post('http://127.0.0.1:8000/api/accounts/recruiter/login/', { email:email, password:password });
       toast.success(res.data.message);
       localStorage.setItem("user_type", "recruiter");
-      localStorage.setItem("user_email", email);
+      localStorage.setItem("email", email);
       navigate("/home");
     } catch (err) {
       toast.error(err.response?.data?.error || "Invalid credentials");

@@ -14,3 +14,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
         )
         return user
+    from rest_framework import serializers
+from .models import Candidate
+
+class CandidateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candidate
+        fields = ["email", "username", "mobile_number", "profile_image", "resume"]

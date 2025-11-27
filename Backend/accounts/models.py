@@ -9,6 +9,8 @@ class Candidate(models.Model):
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50, blank=True)
     mobile_number = models.CharField(max_length=15)
+    profile_image = models.ImageField(upload_to="profiles/", null=True, blank=True)
+    resume = models.FileField(upload_to="resumes/", null=True, blank=True)
 
     def __str__(self):
         return self.email

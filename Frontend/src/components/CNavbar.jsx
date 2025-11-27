@@ -1,11 +1,11 @@
 import React from "react";
 
 export default function CNavbar() {
-  const email = localStorage.getItem("user_email");
+  const email = localStorage.getItem("email");
 
   const logout = () => {
     localStorage.removeItem("user_type");
-    localStorage.removeItem("user_email");
+    localStorage.removeItem("email");
     window.location.href = "/candidate-login";
   };
 

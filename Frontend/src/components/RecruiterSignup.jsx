@@ -19,7 +19,7 @@ export default function Recruiter() {
       toast.warning("Please enter email before signup");
       return;
     }
-    axios.post("http://127.0.0.1:8000/recruiter/send-otp/", { email }).then((res) => {
+    axios.post("http://127.0.0.1:8000/api/accounts/recruiter/send-otp/", { email }).then((res) => {
         toast.success("OTP sent");
         setOpenOtp(true);
       })
@@ -30,7 +30,7 @@ export default function Recruiter() {
 
   const handleResend = async () => {
     try {
-      await axios.post("http://127.0.0.1:8000/recruiter/send-otp/", { email });
+      await axios.post("http://127.0.0.1:8000/api/accounts/recruiter/send-otp/", { email });
       toast.success("OTP resent successfully!");
     } catch (err) {
       toast.error(err.response?.data?.error || "Error resending OTP");
@@ -39,11 +39,11 @@ export default function Recruiter() {
 
   const handleVerify = async (email, otp) => {
     try {
-      const res = await axios.post("http://127.0.0.1:8000/recruiter/verify-otp/", {email,otp,username: fname,password: password,mobile_number: mobile,organization_name: selectedCompany});
+      const res = await axios.post("http://127.0.0.1:8000/api/accounts/recruiter/verify-otp/", {email,otp,username: fname,password: password,mobile_number: mobile,organization_name: selectedCompany});
       toast.success("OTP Verified Successfully!");
       setOpenOtp(false);
       localStorage.setItem("user_type", "recruiter");
-      localStorage.setItem("user_email", email);
+      localStorage.setItem("email", email);
       Navigate("/home");
     } catch (err) {
       toast.error("Error verifying OTP");
